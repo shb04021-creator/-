@@ -1,0 +1,57 @@
+{
+ "quarters": [
+  "20262",
+  "20261",
+  "20254",
+  "20253",
+  "20252",
+  "20251",
+  "20244",
+  "20243"
+ ],
+ "files": [
+  {
+   "file": "data/sales_trdar.csv",
+   "dataset": "서울시 상권분석서비스(추정매출-상권) OA-15572",
+   "rows": 8601,
+   "called": "2026-11-07"
+  },
+  {
+   "file": "data/store_trdar.csv",
+   "dataset": "서울시 상권분석서비스(점포-상권) OA-15577",
+   "rows": 12174,
+   "called": "2026-11-07"
+  },
+  {
+   "file": "data/flpop_trdar.csv",
+   "dataset": "서울시 상권분석서비스(길단위인구-상권) OA-15568",
+   "rows": 13189,
+   "called": "2026-11-07"
+  },
+  {
+   "file": "data/wrcpop_trdar.csv",
+   "dataset": "서울시 상권분석서비스(직장인구-상권) OA-15569",
+   "rows": 36027,
+   "called": "2026-11-07"
+  },
+  {
+   "file": "data/repop_trdar.csv",
+   "dataset": "서울시 상권분석서비스(상주인구-상권) OA-15584",
+   "rows": 35908,
+   "called": "2026-11-07"
+  },
+  {
+   "file": "data/ix_trdar.csv",
+   "dataset": "서울시 상권분석서비스(상권변화지표-상권) OA-15576",
+   "rows": 1650,
+   "called": "2026-11-07"
+  },
+  {
+   "file": "data/area.csv",
+   "dataset": "서울시 상권분석서비스(영역-상권) OA-15560",
+   "rows": 1650,
+   "called": "2026-11-07"
+  }
+ ],
+ "failed_calls": []
+}

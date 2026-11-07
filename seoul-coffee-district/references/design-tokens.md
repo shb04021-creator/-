@@ -1,31 +1,17 @@
-# 공통 디자인 토큰 (Material Design 3 · 커피 브라운)
+# 공통 디자인 토큰 (깔끔한 에디토리얼 · 커피 웜톤)
 
-옐로우·오렌지·화이트가 같은 값을 쓴다. CSS 변수로 `:root`에 선언하고 다크 모드도 정의한다.
+옐로우·오렌지·화이트가 같은 값을 쓴다. 손글씨 서체, 일본어 문구, 과한 감성 카피는 쓰지 않는다(담백하게).
 
 ```css
-:root {
-  --md-primary: #6F4E37;        /* coffee brown */
-  --md-on-primary: #FFFFFF;
-  --md-primary-container: #F3DFD2;
-  --md-on-primary-container: #2A1709;
-  --md-secondary: #8C6A4F;
-  --md-tertiary: #3E6B5A;       /* 강조·긍정 지표 */
-  --md-error: #B3261E;          /* 리스크·하락 */
-  --md-surface: #FFF8F4;
-  --md-surface-container: #F5EBE4;
-  --md-on-surface: #1F1A17;
-  --md-outline: #85736A;
-  --radius-card: 16px; --radius-chip: 8px;
-  --elev-1: 0 1px 3px rgba(0,0,0,.12);
-  --font: 'Pretendard Variable', Pretendard, system-ui, sans-serif;
-}
-@media (prefers-color-scheme: dark) {
-  :root { --md-primary:#E0BFA6; --md-on-primary:#3F2716; --md-surface:#17120F; --md-surface-container:#231C18; --md-on-surface:#ECE0DA; --md-primary-container:#573A26; --md-on-primary-container:#FBDCC8; }
-}
+:root{--paper:#F6F4F0;--ink:#24221F;--mute:#86807A;--line:#E2DDD6;--accent:#7A5A44;--warm:#C9A27E;--card:#FFFFFF;
+--sans:'Pretendard Variable',Pretendard,system-ui,sans-serif}
+@media (prefers-color-scheme:dark){:root{--paper:#18191B;--ink:#ECE8E2;--mute:#8F8A84;--line:#2C2E31;--card:#1F2022;--accent:#D4B49A}}
 ```
 
-- 폰트: Pretendard (`https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css`)
-- 타이포: Display 44/52 bold, Headline 28/36 semibold, Title 20/28 semibold, Body 16/24, Label 13/18 medium, 숫자는 `font-variant-numeric: tabular-nums`.
-- 차트: 주 시리즈 primary, 비교 시리즈 outline 회색, 강조 1개만 tertiary. 축 라벨에 단위. 차트 아래 `.source-caption`(Label, outline 색).
-- 레이아웃: 최대 폭 1200px, 12컬럼, 모바일(<768px) 1컬럼·좌우 16px.
-- 영상(16:9, 1920×1080): 같은 색·폰트, 장면 전환 300ms ease, 자막 하단 중앙 Title 크기.
+- 서체: Pretendard 하나. 제목 600, 큰 숫자 200~300, 본문 400. 숫자는 tabular-nums.
+- 1px 얇은 선, 각진 카드(radius 4px), 넉넉한 여백(섹션 72px). Material Design 3는 컴포넌트 구조(카드·표·칩)로만 사용.
+- 차트: 주 시리즈 accent, 나머지 line 회색. 차트마다 `.source-caption`.
+- 영상(화이트): 16:9, 30초, 장면 6개 × 5초. 배경은 램프 조명의 오타루 카페 실사 사진(라이선스 확인된 Wikimedia Commons, 출처 표기), 어둡게 처리하고 아주 느린 드리프트.
+  상단 위치 태그(📍 지역 · 상권), 가운데 대화체 자막 한 줄(Gowun Dodum, 흰 글씨+그림자) + 아래 작은 근거 수치 한 줄.
+  한국어 설명 내레이션(edge-tts ko-KR-SunHiNeural, 약간 느리게·낮게), 장면 시작마다 해당 문장 재생. 잔잔한 피아노 BGM은 음성보다 작게.
+  장면: 시장 → 후보 압축 → 선정 상권 → 고객 → 인테리어 → 제안(메뉴·투자·손익).

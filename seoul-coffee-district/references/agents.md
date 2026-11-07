@@ -46,7 +46,7 @@
 
 ## 화이트 — 영상 개발자
 - 입력: `design_spec.md`, `report.html`, `final_solution.md`.
-- 하는 일: 16:9, 30초, 자막 포함, BGM 없음. 핵심 메시지 3~4개 → 최종 솔루션으로 마무리. 기본은 `output/video/intro.html`(CSS/JS 애니메이션, 자동 재생, 30초). ffmpeg와 브라우저 녹화가 가능하면 `intro.mp4`도. 화면 속 숫자도 출처 자막.
+- 하는 일: `references/design-tokens.md`의 영상 규격 그대로. 자막·내레이션 문장의 숫자는 분석 결과에서 가져오고 출처를 영상 아래 캡션에. 결과를 `output/video/intro.html`(단독 재생)과 보고서 10절에 넣는다. 성우 톤은 설명하듯 담백하게, 교육 방송 말투 금지.
 
 ## 퍼플 1·2·3 — 평가자 (독립)
 - 공통: `references/rubric.md` 기준, 다른 퍼플 점수 파일을 열지 않는다. 감점마다 근거 위치와 구체적 개선 요구. 출력은 SKILL.md의 `scores_<회차>.json` 형식(`evaluator`는 purple1/2/3).
