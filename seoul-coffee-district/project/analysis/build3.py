@@ -42,9 +42,15 @@ def ceiling(sps_q,hair=None,fte=None,inv_=None):  # 3년 안에 투자를 회수
     h=HAIR if hair is None else hair; f=FTE if fte is None else fte; iv=inv if inv_ is None else inv_
     base=sps_q*4*h; return (sum(base*k for k in ramp)*(1-COGS-OTH)-3*f*WAGE*12-iv)/36
 FORMATS=[("30평 라운지",4.5,30*300e4+6000e4+2500e4),("20평 컴팩트 라운지 (제안)",3.5,20*300e4+5000e4+2000e4),("15평 테이크아웃",2.5,15*300e4+3000e4+1500e4)]
-rent_ceiling=ceiling(pk["sales_per_store_q"]); RENT=round(rent_ceiling*0.85/1e5)*1e5   # 기준 시나리오 월세 = 상한의 85%
+rent_ceiling=ceiling(pk["sales_per_store_q"]); RENT=400e4   # 검토용 월세 가정(시장 임대료 아님). 판단 기준은 월세 상한
+AREA=pd.read_csv(R/"data/area.csv",dtype={"TRDAR_CD":str}).set_index("TRDAR_CD").RELM_AR
+dens=lambda t:t["flpop"]/AREA[t["code"]]
+dens_pk=dens(pk); dens_oth=[dens(t) for t in t5 if t["code"]!=pk["code"]]
+S_IX=SRC("상권변화지표-상권","OA-15576",f"{Q0}")
+def eul(w): c=w[-1]; j=(ord(c)-0xAC00)%28 if '가'<=c<='힣' else 0; return w+("으로" if j and j!=8 else "로")
 base,pl,pay=model(pk["sales_per_store_q"],RENT); _,pl_lo,pay_lo=model(pk["sales_per_store_q"],RENT,0.8)
 _,_,pay_at_ceil=model(pk["sales_per_store_q"],rent_ceiling)
+fee=rent_ceiling*12/base   # 3년차 매출 대비 월세 상한 비율 = 몰 수수료 환산 기준
 STOP=base*ramp[0]/12*0.8   # 오픈 6개월 월매출이 1년차 계획의 80% 미만이면 철수 검토
 eok2=lambda v:f"{v/1e8:,.2f}억 원"
 def mw(v):
@@ -88,7 +94,9 @@ toprows="".join(f'<tr class="{"hl" if t["code"]==pk["code"] else ""}"><td>{i+1}<
 plrows="".join(f'<tr><td>{p["y"]}년차</td><td>{p["k"]*100:.0f}%</td><td>{eok(p["rev"])}</td><td>{eok(p["rev"]*(COGS+OTH))}</td><td>{eok(labor)}</td><td>{eok(RENT*12)}</td><td><b>{eok(p["op"])}</b></td></tr>' for p in pl)
 invrows="".join(f'<tr><td>{k}</td><td>{mw(v)}</td></tr>' for k,v in INV.items())
 sec_ceil=ceiling([t for t in t5 if t["code"]!=pk["code"]][0]["sales_per_store_q"])
-scen=[(RENT*0.8,"월세 낮음"),(RENT,"기준"),(rent_ceiling,"상한")]
+scen=[(300e4,"검토 가정 A"),(400e4,"검토 가정 B"),(500e4,"검토 가정 C"),(rent_ceiling,"상한")]
+econ="".join(f'<tr class="{"hl" if t["code"]==pk["code"] else ""}"><td>{t["name"]}<small>{t["gu"]} {t["dong"]}</small></td><td>{eok(t["sales_per_store_q"])}</td><td>{(mw(ceiling(t["sales_per_store_q"],0.8)) if ceiling(t["sales_per_store_q"],0.8)>0 else "회수 불가")}</td><td>{(mw(ceiling(t["sales_per_store_q"],1.0)) if ceiling(t["sales_per_store_q"],1.0)>0 else "회수 불가")}</td></tr>' for t in t5)
+viable=[t["name"] for t in t5 if ceiling(t["sales_per_store_q"],0.8)>0]
 fmtrows="".join(f'<tr class="{"hl" if "제안" in n else ""}"><td>{n}</td><td>{f}명</td><td>{mw(iv)}</td><td>{mw(max(0,ceiling(pk["sales_per_store_q"],0.8,f,iv)))}</td><td>{mw(max(0,ceiling(pk["sales_per_store_q"],1.0,f,iv)))}</td></tr>' for n,f,iv in FORMATS)
 scenrows="".join(f'<tr><td>{lab}</td><td>{mw(rv)}</td><td>{eok2(model(pk["sales_per_store_q"],rv)[1][0]["op"])}</td><td>{eok2(model(pk["sales_per_store_q"],rv)[1][2]["op"])}</td><td>{model(pk["sales_per_store_q"],rv)[2]:.1f}년</td></tr>' for rv,lab in scen)
 second=[t for t in t5 if t["code"]!=pk["code"]][0]
@@ -116,7 +124,7 @@ html=HEAD.replace("__T__","코엑스 상권 출점 전략")+f'''<body>
 <h1>다음 매장은 코엑스 상권,<br>오후에 머무는 20평 라운지입니다</h1>
 <p class="lede">서울 커피 상권 {qa['trdar_all8']:,}곳을 같은 규칙으로 걸러 한 곳을 골랐습니다. 이 상권의 손님은 서울 평균보다 오후와 주말에 오고, 한 번에 {tk:.1f}배를 씁니다.</p>
 <div class="stats"><div><b>{pct(pk['growth'])}</b><span>최근 4분기 매출 성장 (서울 {pct(r['seoul_growth'])})<br>{jump_q[2:]} 한 단계 상승 후 유지</span></div><div><b>{tk:.1f}배</b><span>1회 결제 금액<br>{M['ticket']:,.0f}원 vs 서울 {SE['ticket']:,.0f}원</span></div><div><b>{eok2(pl[2]['op'])}</b><span>3년차 영업이익<br>(월세 {mw(RENT)} 가정)</span></div><div><b>{mw(rent_ceiling)}</b><span>출점 가능 월세 상한<br>(3년 회수 기준 Go/No-Go)</span></div></div>
-<p class="source-caption">출처: {S_SALES}; {S_SALES4}. 매출은 카드결제 기반 추정치, 손익은 가정치.</p></div>
+<p class="source-caption">출처: {S_SALES} (1회 결제 비교는 최근 4개 분기 합). 매출은 카드결제 기반 추정치, 손익은 가정치.</p></div>
 <div class="cover-map">{MAP}<p class="source-caption">점: 커피-음료 매출이 있는 상권 · 진한 점: 1단계 통과 {qa['screened']}곳 · 큰 점: 코엑스. 좌표: {S_AREA}</p></div></header>
 <main>
 <section><div class="sh"><div class="kicker">01 · 결론</div><h2>세 가지 판단</h2></div>
@@ -129,15 +137,15 @@ html=HEAD.replace("__T__","코엑스 상권 출점 전략")+f'''<body>
 <div class="step"><em>2</em><div><b>점수 매기기</b><p>성장률 40 · 유동인구 증가 15 · 점포당 매출 20 · 순개업 10 · 직장인구 15. 지표마다 상하위 5%를 잘라 표준화.</p></div></div>
 <div class="step"><em>3</em><div><b>흔들어 보기</b><p>가중치 네 가지(기본·수요·수익·균등)의 평균 순위로 최종 결정. 동률이면 유동인구가 늘어난 곳.</p></div></div></div>
 <div><table class="funnel"><tbody><tr><td>커피 매출이 있는 상권</td><td>{qa['trdar_any']:,}</td></tr><tr><td>8개 분기 모두 존재</td><td>{qa['trdar_all8']:,}</td></tr><tr><td>점포 5개+ · 인구 데이터 결합</td><td>{qa['universe']:,}</td></tr><tr><td>1단계 통과</td><td>{qa['screened']}</td></tr><tr><td>최종</td><td>1</td></tr></tbody></table>
-<p class="note">코엑스와 {josa(second['name'],'은','는')} 평균 순위가 같아 동률 규칙(유동인구 증가)으로 코엑스가 남았습니다. 다만 이 근거는 약합니다. 길단위 유동인구는 도로 위 보행자를 세기 때문에 실내 몰이 큰 코엑스는 면적당 {pk['flpop']/145396:.2f}명으로 다른 후보(3~9명)보다 크게 적게 잡힙니다. 그래서 두 곳을 06절과 같은 손익 모델로 다시 비교했습니다. 코엑스는 월세 {mw(rent_ceiling)}까지 3년 회수가 되지만, {josa(second['name'],'은','는')} 점포당 매출({eok(second['sales_per_store_q'])}/분기)이 낮아 월세가 0원이어도 20평 매장을 3년 안에 회수할 수 없습니다.</p></div></div>
+<p class="note">코엑스와 {josa(second['name'],'은','는')} 평균 순위가 같아 동률 규칙(유동인구 증가)으로 코엑스가 남았습니다. 다만 이 근거는 약합니다. 길단위 유동인구는 도로 위 보행자를 세기 때문에 실내 몰이 큰 코엑스는 상권 면적 1㎡당 분기 {dens_pk:.2f}명으로 다른 후보({min(dens_oth):.1f}~{max(dens_oth):.1f}명/㎡)보다 크게 적게 잡힙니다. 그래서 후보 다섯 곳을 06절과 같은 손익 모델로 다시 비교했습니다(06절 표). 3년 안에 회수가 되는 곳은 {', '.join(viable)}이고, 그중 감당할 수 있는 월세가 가장 높은 곳이 코엑스입니다.</p></div></div>
 <div class="wrap"><table><thead><tr><th>#</th><th>상권</th><th>4Q 성장</th><th>점포</th><th>점포당 분기매출</th><th>순개업(8Q)</th><th>유동인구</th><th>순위 기본·수요·수익·균등</th></tr></thead><tbody>{toprows}</tbody></table></div>
 <p class="source-caption">출처: {S_SALES}; {S_STORE}; {S_FL}; 서울시 상권분석서비스(직장인구-상권) OA-15569 / {Q0} / 호출일 {called}. 재현: analysis/analyze.py</p></section>
 
 <section><div class="sh"><div class="kicker">03 · 성장의 성격</div><h2>꾸준히 오른 게 아니라, 한 단계 올라선 뒤 그 자리를 지켰습니다</h2></div>
 <div class="grid2"><div>{line(q,qs)}<p class="source-caption">코엑스 상권 분기별 커피 매출(억 원, 추정). 점선은 전·후 4분기 평균. 출처: {S_SALES}</p></div>
-<div><p>분기 평균 매출은 {before/1e8:.1f}억 원에서 {after/1e8:.1f}억 원으로 올랐고, {jump_q} 이후 네 분기 동안 이 수준이 유지됐습니다. 같은 분기 서울 상권의 변화 중앙값은 {pct(qa['market_qoq_median'][Q[3]])}여서 시장 전체의 현상은 아닙니다.</p>
+<div><p>분기 평균 매출은 {before/1e8:.1f}억 원에서 {after/1e8:.1f}억 원으로 올랐고, {jump_q} 이후 네 분기 동안 이 수준이 유지됐습니다. 같은 분기 서울 커피 상권별 전분기 대비 변화의 중앙값은 {pct(qa['market_qoq_median'][Q[3]])}여서 시장 전체의 현상은 아닙니다.</p>
 <p>성장을 나누면 점포 수 {pct(dec['store_growth'])}, 점포당 매출 {pct(dec['sps_growth'])}, 유동인구 {pct(dec['flpop_growth'])}입니다. 점포는 {jump_q}에 13개에서 14개로 1곳 늘었을 뿐이어서 성장의 대부분은 점포당 매출에서 나왔습니다. 다만 새로 연 1곳이 대형 점포였는지는 이 데이터로 알 수 없습니다.</p>
-<p>서울시 상권변화지표는 코엑스를 '{pk['ix']}'으로 분류합니다(운영·폐업 점포의 평균 영업기간 기준). 매출 수준은 올랐지만 점포 구성은 크게 바뀌지 않았다는 뜻이라 위 분해와 맞습니다.</p>
+<p>참고로 서울시 상권변화지표는 코엑스 상권 전체(커피만이 아닌 전 업종)를 {eul(chr(39)+pk['ix']+chr(39))} 분류합니다. 운영·폐업 점포의 평균 영업기간으로 정하는 지표라 커피 매출 변화와 직접 비교할 수는 없고, 상권 전체의 점포 교체가 활발하지 않다는 정도로만 읽습니다.</p><p class="source-caption">출처: {S_IX}</p>
 <p class="caution"><b>이 데이터로 알 수 없는 것.</b> 점포당 매출이 왜 올랐는지(대형 점포 입점, 전시·행사 증가 등)는 상권 단위 데이터로 가려낼 수 없습니다. 3년 성장을 그대로 늘려 잡지 않고, 손익은 현재 수준을 상한으로 두었습니다. 원인은 출점 전 실사의 첫 확인 항목입니다.</p></div></div></section>
 
 <section><div class="sh"><div class="kicker">04 · 고객</div><h2>서울 평균보다 오후·주말에 오고, 한 번에 {tk:.1f}배를 씁니다</h2></div>
@@ -154,19 +162,21 @@ html=HEAD.replace("__T__","코엑스 상권 출점 전략")+f'''<body>
 <div class="photo" style="background-image:url('{PH1}')"><span>공간 분위기 참고 이미지</span></div><p class="source-caption">{CREDIT}</p></section>
 
 <section><div class="sh"><div class="kicker">06 · 숫자</div><h2>월세 {mw(rent_ceiling)} 이하면 출점합니다</h2></div>
-<p>3년차 매출은 이 상권 점포당 연 추정매출({eok2(pk['sales_per_store_q']*4)})의 80%인 {eok2(base)}로 잡았습니다. 평균은 대형 프랜차이즈 점포가 끌어올리고, 03절처럼 성장 원인을 모르기 때문에 신규점에는 보수적으로 적용했습니다. 월세 하나만 바꿔 가며 같은 모델로 계산합니다.</p>
+<p>3년차 매출은 이 상권 점포당 연 추정매출({eok2(pk['sales_per_store_q']*4)})의 80%인 {eul(eok2(base))} 잡았습니다. 80%는 데이터로 정한 값이 아닌 판단 가정입니다. 평균은 대형 프랜차이즈 점포가 끌어올리고, 03절처럼 성장 원인을 모르기 때문에 신규점에는 낮춰 적용했고, 평균 그대로일 때(100%)의 결과도 함께 보여 줍니다. 월세 하나만 바꿔 가며 같은 모델로 계산합니다.</p>
 <div class="grid2"><div><table><tbody>{invrows}<tr><td><b>투자 합계 (보증금 {mw(DEP)} 별도)</b></td><td><b>{mw(inv)}</b></td></tr></tbody></table></div>
 <div class="stats small"><div><b>{pay:.1f}년</b><span>회수 기간 (월세 {mw(RENT)})</span></div><div><b>{pay_lo:.1f}년</b><span>매출 −20%일 때</span></div><div><b>{mw(rent_ceiling)}</b><span>월세 상한 (3년 회수)</span></div></div></div>
-<p><b>매장 크기는 손익으로 정했습니다.</b> 같은 매출 가정에서 매장이 클수록 인건비와 투자비가 늘어 감당할 수 있는 월세가 줄어듭니다. 30평 라운지는 매출이 상권 평균에 도달해야만 성립해, 체류형 컨셉을 유지하면서 회수가 되는 20평을 제안합니다.</p>
+<p><b>매장 크기는 컨셉과 손익의 절충입니다.</b> 아래 표는 형태가 달라도 매출이 같다고 둔 단순 비교라, 작은 매장일수록 월세 상한이 높게 나옵니다. 15평 테이크아웃이 숫자로는 가장 유리하지만, 코엑스 손님은 오후에 머물고 여럿이 함께 결제하는 특성(04절)이 강해 좌석 없는 매장은 같은 매출을 기대하기 어렵다고 봤습니다. 30평 라운지는 매출이 상권 평균에 도달해야만 회수되므로, 체류 좌석을 확보하면서 보수적 매출로도 회수되는 20평을 고릅니다. 형태별 매출 차이는 데이터가 없어 오픈 후 POS로 검증할 항목입니다.</p>
 <div class="wrap"><table><thead><tr><th>형태</th><th>인원(풀타임 환산)</th><th>투자</th><th>월세 상한 (매출 = 평균의 80%)</th><th>월세 상한 (매출 = 평균)</th></tr></thead><tbody>{fmtrows}</tbody></table></div>
+<p><b>후보 다섯 곳 비교 (20평, 같은 모델).</b></p><div class="wrap"><table><thead><tr><th>상권</th><th>점포당 분기 매출</th><th>월세 상한 (매출 = 평균의 80%)</th><th>월세 상한 (매출 = 평균)</th></tr></thead><tbody>{econ}</tbody></table></div>
 <div class="wrap"><table><thead><tr><th>월세 시나리오 (20평)</th><th>월세</th><th>1년차 영업이익</th><th>3년차 영업이익</th><th>회수</th></tr></thead><tbody>{scenrows}</tbody></table></div>
 <div class="wrap"><table><thead><tr><th>연차</th><th>도달률</th><th>매출</th><th>변동비(40%)</th><th>인건비</th><th>임차료 (월 {mw(RENT)})</th><th>영업이익</th></tr></thead><tbody>{plrows}</tbody></table></div>
+<p class="caution"><b>몰 안에 들어가는 경우.</b> 코엑스몰 내부 매장은 고정 월세 대신 매출 연동 수수료인 경우가 많습니다. 같은 기준으로 환산하면 수수료율이 3년차 매출의 {fee*100:.1f}% 이하일 때 위 월세 상한과 같은 조건(3년 회수)을 만족합니다. 회수 기간은 현금 기준이라 감가상각은 빼지 않았고, 직영이라 로열티는 없으며, 보증금은 회수 대상에서 제외했습니다.</p>
 <p class="caution"><b>중단 규칙.</b> 오픈 후 6개월 평균 월매출이 {mw(STOP)}(1년차 계획의 80%) 미만이면 운영 방식을 바꾸거나 철수를 검토합니다. 매출이 계획보다 20% 낮은 상태가 이어지면 회수에 {pay_lo:.1f}년이 걸리기 때문입니다.</p>
 <p class="source-caption">매출 기준값 출처: {S_SALES}. 계산식(모든 표 공통): 영업이익 = 매출 × (1 − 원가 30% − 기타 10%) − 인건비({FTE}명 × 월 {mw(WAGE)}) − 월세 × 12. 월세 상한 = 3년 누적 영업이익이 투자 합계와 같아지는 월세. 원가율·인건비·투자비·도달률은 <b>가정</b>.</p></section>
 
 <section><div class="sh"><div class="kicker">07 · 반론</div><h2>예상 질문과 답</h2></div>
 <dl class="qa"><dt>성장이 한 분기에 몰렸는데, 3년 뒤도 성장한다고 볼 수 있나?</dt><dd>그래서 성장을 늘려 잡지 않았습니다. 한 단계 올라선 수준이 네 분기 유지됐고 유동인구도 늘었다는 점까지만 근거로 쓰고, 손익은 현재 수준을 상한으로 계산했습니다.</dd>
-<dt>규칙을 결과에 맞춰 정한 것 아닌가?</dt><dd>1·2단계만 쓰면 {josa(second['name'],'이','가')} 1위이고, 코엑스는 3단계 동률 규칙으로 남았습니다. 그래서 규칙과 별개로 사업성을 다시 따졌습니다. 같은 손익 모델에서 {josa(second['name'],'은','는')} 어떤 월세에서도 20평 매장을 3년 안에 회수할 수 없고, 코엑스는 월세 {mw(rent_ceiling)}까지 가능합니다. 선정 규칙을 통과하고 사업성까지 남는 곳은 코엑스뿐입니다.</dd>
+<dt>규칙을 결과에 맞춰 정한 것 아닌가?</dt><dd>1·2단계만 쓰면 {josa(second['name'],'이','가')} 1위이고, 코엑스는 3단계 동률 규칙으로 남았습니다. 그래서 규칙과 별개로 사업성을 다시 따졌습니다. 같은 손익 모델로 후보 다섯 곳을 모두 계산하면 {josa(second['name'],'은','는')} 어떤 월세에서도 20평 매장을 3년 안에 회수할 수 없습니다. 회수가 되는 곳은 {', '.join(viable)}이고, 감당할 수 있는 월세는 코엑스({mw(rent_ceiling)})가 가장 높습니다. 규칙이 고른 결과와 사업성 순위가 같은 곳을 가리킵니다.</dd>
 <dt>프랜차이즈가 많은 상권에 들어가도 되나?</dt><dd>프랜차이즈 비중({frc*100:.0f}%)이 서울({frcS*100:.0f}%)보다 높아 표준 메뉴의 가격 경쟁은 치열할 수 있습니다. 포화 여부는 이 데이터로 단정할 수 없어, 같은 메뉴로 경쟁하기보다 체류형 라운지라는 다른 형태로 들어갑니다.</dd>
 <dt>실사에서 무엇이 나오면 출점하지 않나?</dt><dd>① 월세 {josa(mw(rent_ceiling),'을','를')} 넘는 매물만 있을 때, ② 점포당 매출 상승이 대형 점포 1곳의 효과로 확인돼 일반 점포 매출은 그대로일 때, ③ 20평 이상 체류형 매장을 낼 수 있는 자리가 없을 때 출점하지 않습니다.</dd>
 <dt>추정매출을 믿을 수 있나?</dt><dd>절대 금액보다 같은 데이터 안의 상대 비교(성장률·서울 대비 비중)로 판단했습니다. 한계는 08절에 정리했습니다.</dd></dl></section>
@@ -176,7 +186,7 @@ html=HEAD.replace("__T__","코엑스 상권 출점 전략")+f'''<body>
 <tr><td>추정치</td><td class="l">추정매출은 카드결제 기반이라 현금·일부 간편결제가 빠짐</td><td class="l">절대 금액 대신 성장률·서울 대비 비중으로 판단</td></tr>
 <tr><td>레벨 점프</td><td class="l">코엑스 매출은 {jump_q}에 한 번 올라선 뒤 평탄</td><td class="l">성장을 외삽하지 않고 현재 수준을 손익 상한으로</td></tr>
 <tr><td>원인 미상</td><td class="l">점포당 매출 상승 원인을 상권 단위로 구분 불가</td><td class="l">실사 첫 항목으로 지정</td></tr>
-<tr><td>유동인구</td><td class="l">길단위 유동인구는 도로 위 보행자만 세어 실내 몰이 큰 코엑스는 크게 적게 잡힘(면적당 {pk['flpop']/145396:.2f}명, 다른 후보 3~9명)</td><td class="l">절대값은 쓰지 않고 증가율만 참고, 동률 판단은 06절 사업성 비교로 보완</td></tr>
+<tr><td>유동인구</td><td class="l">길단위 유동인구는 도로 위 보행자만 세어 실내 몰이 큰 코엑스는 크게 적게 잡힘(상권 면적 1㎡당 분기 {dens_pk:.2f}명, 다른 후보 {min(dens_oth):.1f}~{max(dens_oth):.1f}명)</td><td class="l">절대값은 쓰지 않고 증가율만 참고, 동률 판단은 06절 사업성 비교로 보완</td></tr>
 <tr><td>매출 기준</td><td class="l">점포당 매출은 상권 평균이라 대형점이 끌어올림(점포별 분포 없음)</td><td class="l">신규점은 평균의 80%로 보수 적용, 월세 시나리오로 민감도 제시</td></tr>
 <tr><td>상권 수 변동</td><td class="l">분기별 상권 {min(qa['trdar_per_q'].values()):,}~{max(qa['trdar_per_q'].values()):,}개</td><td class="l">8개 분기 모두 있는 {qa['trdar_all8']:,}개만 사용</td></tr>
 <tr><td>소표본</td><td class="l">점포 1~4개 상권의 극단값</td><td class="l">점포 5개 이상, 지표별 상하위 5% 절단</td></tr>
@@ -186,7 +196,7 @@ html=HEAD.replace("__T__","코엑스 상권 출점 전략")+f'''<body>
 </tbody></table></div><p class="source-caption">품질 점검: 추정매출 {qa['rows_sales']:,}행, 중복 {qa['dup_sales']}건, 결측 {qa['null_amt']}건, 실패 호출 0건, 원본 raw/ 보존. 출처: {S_SALES}</p></section>
 
 <section><div class="sh"><div class="kicker">09 · 실행</div><h2>실행 로드맵</h2></div>
-<ol class="road"><li><b>1분기</b> 삼성1동 매물 실사: 월세 {mw(rent_ceiling)} 이하 20평 매물 확보 여부, 점포당 매출 상승 원인 확인 → 07절 세 가지 No-Go 조건으로 판정</li><li><b>2분기</b> 계약, 20평 라운지 설계, 단체·선물 주문 채널 준비</li><li><b>3분기</b> 오픈, POS로 시간대·1회 결제 금액 검증, 손익 가정 갱신</li><li><b>4분기~</b> 같은 규칙으로 데이터를 갱신해 2호점 재평가 ({josa(second['name'],'은','는')} 소형 테이크아웃 형태로 별도 검토)</li></ol></section>
+<ol class="road"><li><b>1분기</b> 삼성1동 매물 실사: 월세 {mw(rent_ceiling)} 이하 20평 매물 확보 여부, 점포당 매출 상승 원인 확인 → 07절 세 가지 No-Go 조건으로 판정</li><li><b>2분기</b> 계약, 20평 라운지 설계, 단체·선물 주문 채널 준비</li><li><b>3분기</b> 오픈, POS로 시간대·1회 결제 금액 검증, 손익 가정 갱신</li><li><b>4분기~</b> 같은 규칙으로 데이터를 갱신해 2호점 재평가 (같은 모델에서 회수가 되는 {', '.join(n for n in viable if n!=pk['name'])} 우선)</li></ol></section>
 
 <section><div class="sh"><div class="kicker">10 · 영상</div><h2>30초 요약</h2></div>{FILM}
 <p class="source-caption">영상 속 수치 출처: {S_SALES}; {S_STORE}; {S_FL}. {CREDIT}. 내레이션: 한국어 합성 음성(Microsoft SunHi). 음악: 브라우저 실시간 합성.</p></section>
