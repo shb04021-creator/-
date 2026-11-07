@@ -1,5 +1,6 @@
 """블루·그린·브라운 2회차 분석. 같은 data/ 입력이면 같은 결과를 낸다.
-선정 규칙(사전 선언): 1단계 스크리닝 → 2단계 성장 중심 종합점수 1위."""
+선정 규칙: 1단계 스크리닝 → 2단계 성장 중심 종합점수(가중치 4종) → 3단계 4종 평균 순위 최소, 동률 시 유동인구 증가.
+2회차에 3단계를 추가함. 동률의 사업성 보완 비교는 build3.py 손익 모델에서 수행."""
 import pandas as pd, numpy as np, json, pathlib, sys
 R=pathlib.Path(sys.argv[1]); D=R/"data"; A=R/"analysis"
 Q=json.load(open(D/"manifest.json",encoding="utf-8"))["quarters"]; Q0=Q[0]; REC,PRI=Q[:4],Q[4:]
