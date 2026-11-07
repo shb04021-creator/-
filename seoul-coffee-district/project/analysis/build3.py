@@ -50,7 +50,7 @@ S_IX=SRC("상권변화지표-상권","OA-15576",f"{Q0}")
 def eul(w): c=w[-1]; j=(ord(c)-0xAC00)%28 if '가'<=c<='힣' else 0; return w+("으로" if j and j!=8 else "로")
 base,pl,pay=model(pk["sales_per_store_q"],RENT); _,pl_lo,pay_lo=model(pk["sales_per_store_q"],RENT,0.8)
 _,_,pay_at_ceil=model(pk["sales_per_store_q"],rent_ceiling)
-fee=rent_ceiling*12/base   # 3년차 매출 대비 월세 상한 비율 = 몰 수수료 환산 기준
+fee=(sum(base*k for k in ramp)*(1-COGS-OTH)-3*labor-inv)/sum(base*k for k in ramp)   # 3년 회수가 되는 매출 연동 수수료율 상한 (매년 실제 매출에 부과)
 STOP=base*ramp[0]/12*0.8   # 오픈 6개월 월매출이 1년차 계획의 80% 미만이면 철수 검토
 eok2=lambda v:f"{v/1e8:,.2f}억 원"
 def mw(v):
@@ -170,7 +170,7 @@ html=HEAD.replace("__T__","코엑스 상권 출점 전략")+f'''<body>
 <p><b>후보 다섯 곳 비교 (20평, 같은 모델).</b></p><div class="wrap"><table><thead><tr><th>상권</th><th>점포당 분기 매출</th><th>월세 상한 (매출 = 평균의 80%)</th><th>월세 상한 (매출 = 평균)</th></tr></thead><tbody>{econ}</tbody></table></div>
 <div class="wrap"><table><thead><tr><th>월세 시나리오 (20평)</th><th>월세</th><th>1년차 영업이익</th><th>3년차 영업이익</th><th>회수</th></tr></thead><tbody>{scenrows}</tbody></table></div>
 <div class="wrap"><table><thead><tr><th>연차</th><th>도달률</th><th>매출</th><th>변동비(40%)</th><th>인건비</th><th>임차료 (월 {mw(RENT)})</th><th>영업이익</th></tr></thead><tbody>{plrows}</tbody></table></div>
-<p class="caution"><b>몰 안에 들어가는 경우.</b> 코엑스몰 내부 매장은 고정 월세 대신 매출 연동 수수료인 경우가 많습니다. 같은 기준으로 환산하면 수수료율이 3년차 매출의 {fee*100:.1f}% 이하일 때 위 월세 상한과 같은 조건(3년 회수)을 만족합니다. 회수 기간은 현금 기준이라 감가상각은 빼지 않았고, 직영이라 로열티는 없으며, 보증금은 회수 대상에서 제외했습니다.</p>
+<p class="caution"><b>몰 안에 들어가는 경우.</b> 코엑스몰 내부 매장은 고정 월세 대신 매출 연동 수수료인 경우가 많습니다. 같은 기준으로 환산하면 수수료가 매년 실제 매출에 붙는다고 보고 같은 모델로 풀면, 수수료율 {fee*100:.1f}% 이하일 때 3년 안에 회수됩니다. 회수 기간은 현금 기준이라 감가상각은 빼지 않았고, 직영이라 로열티는 없으며, 보증금은 회수 대상에서 제외했습니다.</p>
 <p class="caution"><b>중단 규칙.</b> 오픈 후 6개월 평균 월매출이 {mw(STOP)}(1년차 계획의 80%) 미만이면 운영 방식을 바꾸거나 철수를 검토합니다. 매출이 계획보다 20% 낮은 상태가 이어지면 회수에 {pay_lo:.1f}년이 걸리기 때문입니다.</p>
 <p class="source-caption">매출 기준값 출처: {S_SALES}. 계산식(모든 표 공통): 영업이익 = 매출 × (1 − 원가 30% − 기타 10%) − 인건비({FTE}명 × 월 {mw(WAGE)}) − 월세 × 12. 월세 상한 = 3년 누적 영업이익이 투자 합계와 같아지는 월세. 원가율·인건비·투자비·도달률은 <b>가정</b>.</p></section>
 
